@@ -8,12 +8,12 @@ class AudioManager:
         pygame.mixer.set_reserved(self.num_reserved)
         self.sounds = {}
         self.music = {}
+        self.music_layers = {}
         self.current_music = None
         self.music_volume = 1.0
         self.sound_effects_volume = 1.0
         self.music_muted = False
         self.sound_effects_muted = False
-        self.music_lock = threading.Lock()
 
     def initialize_sounds(self, sound_files):
         for name, file_path in sound_files.items():
@@ -25,6 +25,16 @@ class AudioManager:
     def initialize_music(self, music_files):
         for name, file_path in music_files.items():
             self.music[name] = file_path
+
+    def initialize_music_layers(self, music_layers):
+        for name, file_path in music_layers.items():
+            self.add_music_layer(name, file_path)
+
+    def add_music_layer(self, name, file_path):
+        try:
+            self.music_layers[name] = pygame.mixer.Sound(file_path)
+        except pygame.error as e:
+            print(f"Error loading music layer {name}: {e}")
 
     def play_sound(self, name, priority=False):
         if not self.sound_effects_muted and name in self.sounds:
@@ -41,17 +51,34 @@ class AudioManager:
                 sound.play()
 
     def play_music(self, track, fade_time=0):
-        with self.music_lock:
-            if not self.music_muted and track in self.music:
-                if self.current_music != track:
-                    if fade_time > 0:
-                        pygame.mixer.music.fadeout(fade_time)
-                        while pygame.mixer.music.get_busy():
-                            pygame.time.delay(100)
-                    pygame.mixer.music.load(self.music[track])
-                    pygame.mixer.music.set_volume(self.music_volume)
-                    pygame.mixer.music.play(-1)
-                    self.current_music = track
+        if not self.music_muted and track in self.music:
+            if self.current_music != track:
+                if fade_time > 0:
+                    pygame.mixer.music.fadeout(fade_time)
+                    while pygame.mixer.music.get_busy():
+                        pygame.time.delay(100)
+                pygame.mixer.music.load(self.music[track])
+                pygame.mixer.music.set_volume(self.music_volume)
+                pygame.mixer.music.play(-1)
+                self.current_music = track
+
+    def play_music_layer(self, name):
+        if name in self.music_layers:
+            layer_sound = self.music_layers[name]
+            layer_sound.play(-1)  # Loop the layer
+
+    def stop_music_layer(self, name):
+        if name in self.music_layers:
+            layer_sound = self.music_layers[name]
+            layer_sound.stop()
+
+    def stop_all_music_layers(self):
+        for layer_sound in self.music_layers.values():
+            layer_sound.stop()
+
+    def stop_music(self):
+        pygame.mixer.music.stop()
+        self.current_music = None
 
     def mute_music(self):
         if not self.music_muted:
