@@ -4,7 +4,8 @@ import threading
 class AudioManager:
     def __init__(self, frequency=44100, size=-16, channels=8, buffer=4096, num_reserved=2):
         pygame.mixer.init(frequency=frequency, size=size, channels=channels, buffer=buffer)
-        pygame.mixer.set_reserved(num_reserved)
+        self.num_reserved = num_reserved
+        pygame.mixer.set_reserved(self.num_reserved)
         self.sounds = {}
         self.music = {}
         self.current_music = None
@@ -28,7 +29,7 @@ class AudioManager:
     def play_sound(self, name, priority=False):
         if not self.sound_effects_muted and name in self.sounds:
             if priority:
-                for i in range(pygame.mixer.get_num_reserved()):
+                for i in range(self.num_reserved):
                     channel = pygame.mixer.Channel(i)
                     if not channel.get_busy():
                         channel.set_volume(self.sound_effects_volume)
